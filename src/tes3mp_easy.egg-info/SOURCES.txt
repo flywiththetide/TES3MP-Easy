@@ -1,0 +1,16 @@
+LICENSE
+README.md
+pyproject.toml
+src/tes3mp_easy/__init__.py
+src/tes3mp_easy/checks.py
+src/tes3mp_easy/client.py
+src/tes3mp_easy/main.py
+src/tes3mp_easy/network.py
+src/tes3mp_easy/server.py
+src/tes3mp_easy/utils.py
+src/tes3mp_easy.egg-info/PKG-INFO
+src/tes3mp_easy.egg-info/SOURCES.txt
+src/tes3mp_easy.egg-info/dependency_links.txt
+src/tes3mp_easy.egg-info/entry_points.txt
+src/tes3mp_easy.egg-info/requires.txt
+src/tes3mp_easy.egg-info/top_level.txt

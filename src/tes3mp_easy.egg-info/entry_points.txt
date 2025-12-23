@@ -1,0 +1,2 @@
+[console_scripts]
+openmw-multi = tes3mp_easy.main:main
