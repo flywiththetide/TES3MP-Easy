@@ -27,8 +27,8 @@ classifiers = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/YOUR_USERNAME_HERE/tes3mp-easy"
-"Bug Tracker" = "https://github.com/YOUR_USERNAME_HERE/tes3mp-easy/issues"
+"Homepage" = "https://github.com/flywiththetide/TES3MP-Easy"
+"Bug Tracker" = "https://github.com/flywiththetide/TES3MP-Easy/issues"
 
 [project.scripts]
 openmw-multi = "tes3mp_easy.main:main"

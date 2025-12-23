@@ -25,7 +25,7 @@ pip install tes3mp-easy
 ### Option B: The Developer Way (GitHub)
 Install the latest bleeding-edge version directly from source:
 ```bash
-pip install git+https://github.com/YOUR_USERNAME/tes3mp-easy.git
+pip install git+https://github.com/flywiththetide/TES3MP-Easy.git
 ```
 
 ## 🎮 How to Use
@@ -43,5 +43,5 @@ The interactive menu will guide you through Setup, Server Hosting, and Diagnosti
 
 ## 🤝 Contributing
 Found a bug?
-1. Open an issue on [GitHub](https://github.com/YOUR_USERNAME/tes3mp-easy/issues).
+1. Open an issue on [GitHub](https://github.com/flywiththetide/TES3MP-Easy/issues).
 2. Fork the repo and submit a PR.
