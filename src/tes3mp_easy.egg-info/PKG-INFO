@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: tes3mp-easy
-Version: 1.0.0
+Version: 1.5.3
 Summary: The one-click setup tool for Morrowind Multiplayer on Linux
 Author-email: Jonathan Oakey <jonathan@example.com>
 License: MIT
@@ -20,48 +20,105 @@ Requires-Dist: rich>=13.0.0
 Requires-Dist: requests>=2.31.0
 Dynamic: license-file
 
-# 🐉 TES3MP Easy (openmw-multi)
+# 🐉 TES3MP Easy
 
-**The "Easy Button" for playing Morrowind Multiplayer on Linux.**
+**The "Easy Button" for playing and hosting Morrowind Multiplayer on Linux.**
 
-A Python CLI tool that automates the installation, configuration, and network diagnostics for TES3MP (Morrowind via OpenMW).
+A powerful Python CLI tool that automates the installation, configuration, network diagnostics, and **server hosting** for TES3MP (Morrowind via OpenMW).
 
 [![PyPI version](https://badge.fury.io/py/tes3mp-easy.svg)](https://badge.fury.io/py/tes3mp-easy)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+---
+
 ## ✨ Features
-* **Global Command:** `openmw-multi` works anywhere on your system.
-* **Auto-Setup:** Installs Flatpak, detects the Engine, and links your Data Files automatically.
-* **Smart Config:** Remembers your Data Files location forever (`~/.config/tes3mp-easy/`).
+* **Zero-Hassle Client:** Installs the engine and links your Data Files automatically.
+* **Smart Config:** Detected and fixed the "duplicate content files" bug automatically (v1.4.2+).
 * **Connection Doctor:** Built-in network diagnostics for Ping and Tailscale tunnels.
-* **Zombie Check:** Detects if a server process is stuck in the background ("Port 25565 In Use").
+* **Server-Only Mode:** Deploy a dedicated server on a VPS (Oracle Cloud, AWS) without graphical dependencies.
+* **Tailscale Integration:** Detects, installs, and manages Tailscale tunnels for easy non-port-forwarded hosting.
+* **Systemd Generator:** Creates persistent background services for your server with one command (v1.5.0+).
+
+---
 
 ## 🚀 Installation
 
 ### Option A: The Easy Way (PyPI)
-Install the latest stable version from the official Python Package Index:
+Install the latest stable version:
 ```bash
 pip install tes3mp-easy
 ```
 
 ### Option B: The Developer Way (GitHub)
-Install the latest bleeding-edge version directly from source:
+Install from source:
 ```bash
 pip install git+https://github.com/flywiththetide/TES3MP-Easy.git
 ```
 
-## 🎮 How to Use
-Once installed, simply type this in your terminal:
+---
+
+## 📖 Recipes & Cookbook
+
+### 🎮 Scenario 1: I just want to play!
+1. Install the tool: `pip install tes3mp-easy`
+2. Run it: `tes3mp-easy`
+3. Select **Option 5** to point it to your Morrowind `Data Files` folder.
+4. Select **Option 1** to Launch Game.
+5. In the browser, find a server and double-click to join!
+
+### 🏠 Scenario 2: Hosting a Private Server for Friends (No Port Forwarding)
+We use **Tailscale** to let friends join without opening router ports.
+1. Run `tes3mp-easy`.
+2. Select **Server Settings** > **Install Server**.
+3. When asked "Install Tailscale?", say **Yes**.
+4. Start the server. The tool will show your **Tailscale IP** (e.g. `100.x.y.z`).
+5. Tell your friends to:
+   * Install Tailscale and join your network (or share the node with them).
+   * Put your Tailscale IP into their "Direct Connect" field.
+
+### ☁️ Scenario 3: Deploying on a Cloud VPS (Oracle/AWS)
+You want a 24/7 server running on a free-tier Linux VPS. You don't have a monitor attached.
+**Run this single command:**
 ```bash
-openmw-multi
+# Installs server, sets name/password, and starts it as a background service
+tes3mp-easy --server --install --name "Morrowind World" --password "secret123" --service
 ```
-The interactive menu will guide you through Setup, Server Hosting, and Diagnostics.
+**Done.** Your server is now running on port 25565.
+
+### 🛠️ Scenario 4: Fixing "Content Files Specified More Than Once"
+If your game crashes on startup with this error, your config files are messy.
+1. Update the tool: `pip install --upgrade tes3mp-easy`
+2. Run `tes3mp-easy` **once**.
+3. It will automatically detect the duplicate lines and clean your local configuration.
+4. Launch the game again—it should work!
+
+### 🧹 Scenario 5: Resetting Configuration
+Changed your game folder? Moved files?
+1. Run `tes3mp-easy`.
+2. Select **Option 5 (Set Data Files Path)**.
+3. Enter the new path.
+   * This re-writes your `openmw.cfg` with the correct paths and load order.
+
+---
+
+## 🤖 Advanced Automation Flags
+**New in v1.5.0!**
+
+| Flag | Description |
+|------|-------------|
+| `--server` / `-s` | **Server-Only Mode.** Skips all graphical checks (Flatpak, Client). Safe for headless VPS. |
+| `--install` | **Auto-Install.** Downloads TES3MP and dependencies (libluajit, etc.) automatically without prompts. |
+| `--name "X"` | Sets the server name in `tes3mp-server-default.cfg`. |
+| `--password "X"` | Sets the server password. |
+| `--service` | **Magic Mode.** Generates a `systemd` service file (`/etc/systemd/system/tes3mp.service`), enables it, and starts it. |
+
+---
 
 ## 📂 Requirements
 - **OS**: Linux (Ubuntu, Arch, Fedora, SteamOS, etc.)
 - **Python**: 3.8 or higher.
-- **Game Files**: You must own Morrowind and have the `Data Files` folder ready.
-- **Engine**: System must support Flatpak (the tool can help you verify this).
+- **Game Files**: You must own Morrowind (GOG/Steam) and have the `Data Files` folder.
+- **Root/Sudo**: Required only for installing system dependencies (`apt install`) or systemd services.
 
 ## 🤝 Contributing
 Found a bug?

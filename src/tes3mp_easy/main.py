@@ -1,124 +1,89 @@
 import sys
 import time
-from rich.console import Console
-from rich.table import Table
+import subprocess
+import argparse
 from rich.panel import Panel
 from rich.prompt import Confirm, Prompt
-from pathlib import Path
-import subprocess
 
 # Import our modules
 from . import checks
 from . import network
 from .client import setup_client
-from .server import setup_server
-from .utils import clear_screen, get_project_root
+from .server import setup_server, get_server_root, install_server, configure_server, install_systemd_service
+from .healthcheck import run_system_check, run_server_check
+from .utils import console, clear_screen, load_stored_data_path
 
-console = Console()
 
-def run_system_check():
-    """Runs a visual pre-flight check of the system."""
-    while True: # Loop until healthy or user bails
-        clear_screen()
-        console.print(Panel("[bold cyan]System Status Check[/bold cyan]", expand=False))
+def parse_args():
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(description="TES3MP Easy Setup Tool")
+    parser.add_argument("--server", "-s", action="store_true", help="Run in dedicated server mode")
+    parser.add_argument("--install", action="store_true", help="Auto-install dependencies/server (non-interactive)")
+    parser.add_argument("--name", help="Set server hostname")
+    parser.add_argument("--password", help="Set server password")
+    parser.add_argument("--service", action="store_true", help="Install as systemd service")
+    return parser.parse_args()
+
+
+def server_main(args):
+    """Entry point for dedicated server mode options."""
+    # Check if we are running in headless automation mode
+    headless = args.install or args.name is not None or args.password is not None or args.service
+    
+    if headless:
+        console.print(Panel("[bold blue]TES3MP Server Automation[/bold blue]", subtitle="Headless Mode"))
         
-        table = Table(show_header=True, header_style="bold magenta")
-        table.add_column("Component", style="dim")
-        table.add_column("Status")
-        table.add_column("Action Needed", style="bold red")
-
-        # -- 1. Flatpak Check --
-        if checks.is_flatpak_installed():
-            flatpak_status = "[green]✅ Installed[/green]"
-            flatpak_action = ""
-            has_flatpak = True
-        else:
-            flatpak_status = "[red]❌ Missing[/red]"
-            flatpak_action = "Install Flatpak"
-            has_flatpak = False
-        table.add_row("Flatpak System", flatpak_status, flatpak_action)
-
-        # -- 2. TES3MP Engine Check --
-        if has_flatpak and checks.is_tes3mp_installed():
-            engine_status = "[green]✅ Installed[/green]"
-            engine_action = ""
-            has_engine = True
-        else:
-            engine_status = "[red]❌ Missing[/red]"
-            engine_action = "Run Client Setup" if has_flatpak else "Fix Flatpak First"
-            has_engine = False
-        table.add_row("TES3MP Engine", engine_status, engine_action)
-
-        # -- 3. Data Files Check --
-        data_status = checks.check_data_files(get_project_root())
-        if data_status["config_linked"]:
-            files_status = "[green]✅ Linked[/green]"
-            files_action = ""
-        elif data_status["local_present"]:
-            files_status = "[yellow]⚠️ Found (Not Linked)[/yellow]"
-            files_action = "Run Client Setup"
-        else:
-            files_status = "[red]❌ Missing[/red]"
-            files_action = "Drop files in folder"
-        table.add_row("Morrowind Data", files_status, files_action)
-
-        # -- 4. Tailscale Check --
-        if checks.is_tailscale_installed():
-            ts_status = "[green]✅ Installed[/green]"
-            if checks.is_tailscale_running():
-                ts_status += " (Running)"
-                ts_action = ""
-            else:
-                ts_status += " [yellow](Stopped)[/yellow]"
-                ts_action = "Start Service"
-        else:
-            ts_status = "[red]❌ Missing[/red]"
-            ts_action = "Install Tailscale"
-        table.add_row("Tailscale Network", ts_status, ts_action)
-
-        # -- 5. Port Status Check --
-        if checks.is_port_free(25565):
-            port_status = "[green]✅ Free[/green]"
-            port_action = "Ready to Host"
-        else:
-            port_status = "[yellow]⚠️  In Use[/yellow]"
-            port_action = "Server Running?"
-        table.add_row("UDP Port 25565", port_status, port_action)
-
-        console.print(table)
-        console.print("\n")
+        # 1. Install (skips prompt if interactive=False)
+        # Note: --install implies we want to install if missing without asking
+        server_root = install_server(interactive=not args.install)
         
-        # --- Auto-Fix Logic ---
-        
-        # Priority 1: Flatpak
-        if not has_flatpak:
-            console.print("[red]CRITICAL: Flatpak is required. Please install it with your distro's package manager.[/red]")
+        if not server_root:
+            console.print("[red]Server installation failed or aborted.[/red]")
             sys.exit(1)
+            
+        # 2. Configure (if args provided)
+        if args.name is not None or args.password is not None:
+            configure_server(server_root, hostname=args.name, password=args.password)
+            
+        # 3. Service
+        if args.service:
+            if not install_systemd_service(server_root):
+                sys.exit(1)
+        
+        console.print("[green]✓ Automation complete.[/green]")
+        return
 
-        # Priority 2: Engine
-        if not has_engine:
-            if Confirm.ask("[bold yellow]TES3MP Engine is missing. Install it now?[/bold yellow]"):
-                console.print("[dim]Running installation...[/dim]")
-                setup_client() 
-                continue # Re-run checks
-            else:
-                # User declined, stop nagging but warn
-                console.print("[yellow]Warning: You cannot play without the engine.[/yellow]")
+    # Classic Interactive Mode
+    clear_screen()
+    console.print(Panel("[bold blue]TES3MP Dedicated Server[/bold blue]", subtitle="Server Mode"))
+    console.print("[dim]Running in server-only mode (no Flatpak/client required)[/dim]\n")
+    
+    run_server_check(get_server_root)
+    Prompt.ask("Press Enter to continue to Server Menu")
+    
+    # Go directly to server setup menu
+    setup_server()
 
-        # Priority 3: Data Linkage
-        # If we found files but config isn't ready
-        if not data_status["config_linked"] and data_status["local_present"]:
-             if Confirm.ask("[bold yellow]Data files found but not linked. Link them now?[/bold yellow]"):
-                 setup_client()
-                 continue
-
-        break # If we get here, pass-through to main menu
 
 def main():
-    # 1. Run the Health Check immediately on start
-    run_system_check()
+    """Main entry point for TES3MP Easy."""
+    args = parse_args()
     
-    # 2. Main Menu
+    # Check for server-only mode (explicit flag or automation args)
+    if args.server or args.install or args.name or args.password or args.service:
+        server_main(args)
+        return
+    
+    # 1. Auto-Clean Configs (Fixes "duplicate content files" error)
+    data_path = load_stored_data_path()
+    if data_path:
+        from .client import update_openmw_configs
+        update_openmw_configs(data_path)
+
+    # 2. Run the Health Check immediately on start (silent if good)
+    run_system_check(interactive=False, setup_client_func=setup_client)
+    
+    # 3. Main Menu
     while True:
         clear_screen()
         console.print(Panel("[bold magenta]TES3MP Manager[/bold magenta]", subtitle="Ready to Play"))
@@ -126,9 +91,10 @@ def main():
         console.print("2. [bold]Server Settings[/bold]")
         console.print("3. [bold]Connection Doctor[/bold] (Test Peer)")
         console.print("4. [bold]Re-run Health Check[/bold]")
-        console.print("5. Exit")
+        console.print("5. [bold]Set Data Files Path[/bold]")
+        console.print("6. Exit")
         
-        choice = Prompt.ask("Select", choices=["1", "2", "3", "4", "5"])
+        choice = Prompt.ask("Select", choices=["1", "2", "3", "4", "5", "6"])
         
         if choice == "1":
             console.print("[green]Launching TES3MP...[/green]")
@@ -151,13 +117,18 @@ def main():
             network.test_peer_connection(target)
             Prompt.ask("\nPress Enter to return...")
         elif choice == "4":
-            run_system_check()
+            run_system_check(interactive=True, setup_client_func=setup_client)
         elif choice == "5":
+            from .client import configure_data_path
+            configure_data_path()
+            Prompt.ask("Press Enter to continue")
+        elif choice == "6":
             console.print("[green]Goodbye![/green]")
             sys.exit()
 
+
 def tailscale_print():
-    # Quick re-implementation of the guide
+    """Quick Tailscale setup guide."""
     console.print(Panel("""
 [bold green]1. Install Tailscale[/bold green]
    curl -fsSL https://tailscale.com/install.sh | sh
@@ -170,6 +141,7 @@ def tailscale_print():
    Port: 25565
     """, title="Tailscale Guide", border_style="blue"))
     Prompt.ask("Press Enter to return")
+
 
 if __name__ == "__main__":
     main()

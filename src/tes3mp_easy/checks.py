@@ -2,7 +2,62 @@ import shutil
 import subprocess
 import os
 import socket
+import ctypes.util
 from pathlib import Path
+
+def check_dependencies():
+    """
+    Checks for required system libraries by running ldd on the tes3mp binary.
+    Returns a list of missing library names.
+    """
+    missing = []
+    
+    # Locate the binary - tes3mp.x86_64 is the actual binary, tes3mp-browser/server are scripts
+    install_dir = get_install_dir()
+    
+    # We might have different binary names depending on version, generic catch
+    binaries = ["tes3mp.x86_64", "tes3mp"]
+    target_bin = None
+    
+    for b in binaries:
+        p = install_dir / b
+        if p.exists():
+            target_bin = p
+            break
+            
+    if not target_bin:
+        # If binary isn't installed yet, valid to return empty list or handle elsewhere
+        return []
+
+    # TES3MP bundles its own libraries in lib/ folder
+    # We need to include this in LD_LIBRARY_PATH when running ldd
+    lib_dir = install_dir / "lib"
+    env = os.environ.copy()
+    if lib_dir.exists():
+        existing_ld = env.get("LD_LIBRARY_PATH", "")
+        env["LD_LIBRARY_PATH"] = f"{lib_dir}:{existing_ld}" if existing_ld else str(lib_dir)
+
+    try:
+        # Run ldd with bundled lib path
+        result = subprocess.run(["ldd", str(target_bin)], capture_output=True, text=True, env=env)
+        if result.returncode != 0:
+            return []
+            
+        # Parse output
+        # Example line: "libzvbi.so.0 => not found"
+        for line in result.stdout.splitlines():
+            if "not found" in line:
+                # Extract lib name. Usually "   libname.so.X => not found"
+                parts = line.split("=>")
+                if len(parts) > 0:
+                    lib = parts[0].strip()
+                    if lib:
+                        missing.append(lib)
+                        
+    except Exception:
+        pass
+    
+    return missing
 
 def is_flatpak_installed():
     return shutil.which("flatpak") is not None
