@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tes3mp-easy"
-version = "1.5.3"
+version = "1.5.4"
 description = "The one-click setup tool for Morrowind Multiplayer on Linux"
 readme = "README.md"
 requires-python = ">=3.8"

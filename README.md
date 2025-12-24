@@ -4,7 +4,7 @@
 
 A powerful Python CLI tool that automates the installation, configuration, network diagnostics, and **server hosting** for TES3MP (Morrowind via OpenMW).
 
-[![PyPI version](https://badge.fury.io/py/tes3mp-easy.svg)](https://badge.fury.io/py/tes3mp-easy)
+[![PyPI version](https://img.shields.io/pypi/v/tes3mp-easy.svg?color=blue)](https://pypi.org/project/tes3mp-easy/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ---
